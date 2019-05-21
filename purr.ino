@@ -87,7 +87,7 @@ float exh_imp_invwid = 0.2;
 float exh_imp_fwdwid = 0.3;
 
 // Vocal tract parameters
-float vocal_cutoff_freq = 530.0;
+float vocal_cutoff_freq = 250.0;
 
 // Purr rate (seconds per breath in+out)
 float inhale_time = 1.2;
