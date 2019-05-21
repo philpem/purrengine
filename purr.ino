@@ -61,7 +61,7 @@ Lower case sections are the attack/decay ramps (TODO)
 
 //// Purr configuration
 
-const int SAMPLE_RATE = 11025;
+const int SAMPLE_RATE = 44100;
 const float sampling_time = 1.0/SAMPLE_RATE;
 
 
@@ -74,7 +74,8 @@ bool PurrConfigUpdate = true;
 //
 
 // Impulse amplitude
-float imp_ampl = 0.1;
+float inh_ampl = 0.1;               // inhale
+float exh_ampl = inh_ampl * 0.5;    // exhale
 
 // Inhale impulse parameters
 float inh_imp_freq = 30.0;
@@ -90,10 +91,10 @@ float exh_imp_fwdwid = 0.3;
 float vocal_cutoff_freq = 530.0;
 
 // Purr rate (seconds per breath in+out)
-float inhale_time = 1.5;
-float exhale_factor = 0.8;    // inhale/exhale symmetry (exhale time is this * inhale_time)
+float inhale_time = 1.2;
+float exhale_factor = 1.3;    // inhale/exhale symmetry (exhale time is this * inhale_time)
 float breath_hold = 0.1;      // silence between inhale and exhale
-float breath_rest = 1.0;      // rest time between breaths
+float breath_rest = 0.5;      // rest time between breaths  -- increasing this makes the purr more "relaxed"
 
 
 // Audio objects
@@ -230,9 +231,9 @@ void loop() {
     if (imp_time_samps == 0) {
       imp_samp = 0;
     } else if (imp_time_samps < inh_impulse_revtime) {
-      imp_samp = -imp_ampl;
+      imp_samp = -inh_ampl;
     } else if (imp_time_samps < inh_impulse_fwdtime) {
-      imp_samp = imp_ampl;
+      imp_samp = inh_ampl;
     } else {
       imp_samp = 0.0;
     }
@@ -250,9 +251,9 @@ void loop() {
     if (imp_time_samps == 0) {
       imp_samp = 0;
     } else if (imp_time_samps < exh_impulse_revtime) {
-      imp_samp = imp_ampl;
+      imp_samp = exh_ampl;
     } else if (imp_time_samps < exh_impulse_fwdtime) {
-      imp_samp = -imp_ampl;
+      imp_samp = -exh_ampl;
     } else {
       imp_samp = 0.0;
     }
