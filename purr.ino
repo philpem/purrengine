@@ -11,8 +11,7 @@
  *   Input from switches (GPIOs) to turn purring on/off.
  *    See https://learn.sparkfun.com/tutorials/i2s-audio-breakout-hookup-guide/all
  *   Move purr settings into a struct (to allow profile switching)
- *   Purr state into a struct, allow resetting
- *   ADSR envelope
+ *   Purr state into a struct too, allow resetting (e.g. on start/stop)
  * 
  * TODO - document parameters
  *   - Purr rate ({inh,exh}IMP_FREQ)
@@ -217,9 +216,9 @@ void loop() {
 
   // ---- Impulse generator ---- //
 
-  // TODO: ADSR envelope on inhale/exhale
-  
-  float imp_samp;
+  float imp_samp;   // Impulse output sample
+
+  float progress;   // 0.0 to 1.0 depending on how far we are thru the 
 
   if (cyc_time_samps < inh_impulse_n) {
     // -- Inhaling --
@@ -237,6 +236,10 @@ void loop() {
     } else {
       imp_samp = 0.0;
     }
+
+    // Calculate % completion of inhale phase
+    progress = (float)cyc_time_samps / (float)inh_impulse_n;
+    
   } else if (cyc_time_samps < hold_n) {
     // -- Holding --
     imp_samp = 0.0;
@@ -257,6 +260,9 @@ void loop() {
     } else {
       imp_samp = 0.0;
     }
+
+    // Calculate % completion of exhale phase
+    progress = (float)(cyc_time_samps - hold_n) / (float)(exh_impulse_n - hold_n);
     
   } else {
     // -- Rest time between breaths --
@@ -274,6 +280,13 @@ void loop() {
 
 
   // At this point imp_samp is an impulse sample
+
+
+  // ---- Sinusoidal envelope ---- //
+  // (because I'm too lazy to implement ADSR)
+
+  float envelope = sinf(progress * PI);
+  imp_samp *= envelope;
 
 
   // ---- Vocal tract filter ---- //
