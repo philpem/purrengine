@@ -58,6 +58,16 @@ Lower case sections are the attack/decay ramps (TODO)
 #include <filters.h>
 
 
+//// I/O pins
+
+// Switches
+#define IO_SWITCH1  15
+
+// Sound channels
+#define AUDIO_MUZZLE  AudioOutput::LEFTCHANNEL
+#define AUDIO_CHEST   AudioOutput::RIGHTCHANNEL
+
+
 //// Purr configuration
 
 const int SAMPLE_RATE = 44100;
@@ -73,7 +83,7 @@ bool PurrConfigUpdate = true;
 //
 
 // Impulse amplitude
-float inh_ampl = 0.1;               // inhale
+float inh_ampl = 0.2;               // inhale
 float exh_ampl = inh_ampl * 0.5;    // exhale
 
 // Inhale impulse parameters
@@ -87,7 +97,7 @@ float exh_imp_invwid = 0.2;
 float exh_imp_fwdwid = 0.3;
 
 // Vocal tract parameters
-float vocal_cutoff_freq = 250.0;
+float vocal_cutoff_freq = 180.0;
 
 // Purr rate (seconds per breath in+out)
 float inhale_time = 1.2;
@@ -120,11 +130,29 @@ int16_t floatToSigned(const float samp)
 }
 
 
+volatile bool soundactive_toggle = false;
+
+// External Interrupt function with software switch debounce
+void IRAM_ATTR handleInterrupt()
+{
+  static unsigned long last_interrupt_time = 0;
+  unsigned long interrupt_time = millis();
+  
+  // If interrupts come faster than 200ms, assume it's a bounce and ignore
+  if (interrupt_time - last_interrupt_time > 200) 
+  {
+    soundactive_toggle = true;
+  }
+}
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
   delay(1000);
+
+  // Set I/O port mode
+  pinMode(IO_SWITCH1, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(IO_SWITCH1), handleInterrupt, FALLING);
   
   //SPIFFS.begin();
   //file = new AudioFileSourceSPIFFS("/jamonit.mp3");
@@ -180,8 +208,15 @@ void loop() {
   static int yields = 0;
   static bool first = true;
 
+  static bool soundactive_latched = false;
+
   if ((cyc_time_samps == 0) && !first) {
     printf("purr cycle complete, yields: %d (more is better)\n", yields);
+    printf("   switch: %d\n", soundactive_toggle);
+    if (soundactive_toggle) {
+      soundactive_latched = !soundactive_latched;
+      soundactive_toggle = false;
+    }
     yields = 0;
   }
   if (first) {
@@ -296,9 +331,14 @@ void loop() {
 
   // Convert the sample to signed16 then pass it to the I2S and DAC
   int16_t samp[2];
-  
-  samp[AudioOutput::LEFTCHANNEL]  = floatToSigned(filtered_impulse);
-  samp[AudioOutput::RIGHTCHANNEL] = floatToSigned(filtered_impulse);
+
+  if (soundactive_latched) {
+    samp[AUDIO_MUZZLE] = floatToSigned(filtered_impulse);
+    samp[AUDIO_CHEST]  = floatToSigned(filtered_impulse);
+  } else {
+    samp[AudioOutput::LEFTCHANNEL] = 0;
+    samp[AudioOutput::RIGHTCHANNEL] = 0;
+  }
 
   while (!output->ConsumeSample(samp)) { yields++; yield(); };
 
