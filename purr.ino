@@ -1,6 +1,7 @@
 /**
- * "Das Purrmaschine"
+ * "The Purrmachine"
  * Cat purr simulator
+ * Phil Pemberton <philpem@philpem.me.uk>
  * 
  * Libraries required:
  *   Libfilter -- https://github.com/MartinBloedorn/libFilter  (requires EPS renaming to EPSILON due to conflict with ESP32 libs)
